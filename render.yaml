@@ -19,11 +19,4 @@ services:
         sync: false
       - key: MAIL_DEFAULT_SENDER
         sync: false
-    disk:
-      name: certificates-data
-      mountPath: /app/certificates
-      sizeGB: 1
-    disk:
-      name: uploads-data
-      mountPath: /app/uploads
-      sizeGB: 1
+    healthCheckPath: /healthz
