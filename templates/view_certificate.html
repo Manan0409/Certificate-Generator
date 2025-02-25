@@ -69,62 +69,85 @@
             border-radius: 4px;
             border: 1px solid #ced4da;
         }
+        .not-found-container {
+            text-align: center;
+            padding: 50px 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .not-found-icon {
+            font-size: 4rem;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="page-header">
-            <h1>Congratulations, {{ name }}!</h1>
-            <p class="lead">Your achievement has been verified.</p>
-        </div>
-
-        <div class="certificate-container">
-            <div class="text-center">
-                <img src="{{ certificate_path }}" alt="Your Certificate" class="certificate-img">
-            </div>
-        </div>
-
-        <div class="actions-container">
-            <h3 class="section-title">Certificate Actions</h3>
-
-            <div class="verification-info mb-4">
-                <h5><i class="fas fa-check-circle text-success"></i> Verified Certificate</h5>
-                <p class="mb-1">Your certificate is verified with the following ID:</p>
-                <div class="verification-id">{{ certificate_id }}</div>
+        {% if certificate_found %}
+            <div class="page-header">
+                <h1>Congratulations!</h1>
+                <p class="lead">Your achievement has been verified.</p>
             </div>
 
-            <div class="row mb-4">
-                <div class="col-md-6 mb-3">
-                    <a href="{{ download_url }}" class="btn btn-primary w-100">
-                        <i class="fas fa-download action-icon"></i> Download Certificate
-                    </a>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <button id="add-to-linkedin" class="btn btn-linkedin w-100">
-                        <i class="fab fa-linkedin action-icon"></i> Add to LinkedIn
-                    </button>
+            <div class="certificate-container">
+                <div class="text-center">
+                    <img src="{{ certificate_image_url }}" alt="Your Certificate" class="certificate-img">
                 </div>
             </div>
 
-            <h3 class="section-title">Share Your Achievement</h3>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <button id="share-email" class="btn btn-secondary w-100">
-                        <i class="fas fa-envelope action-icon"></i> Email
-                    </button>
+            <div class="actions-container">
+                <h3 class="section-title">Certificate Actions</h3>
+
+                <div class="verification-info mb-4">
+                    <h5><i class="fas fa-check-circle text-success"></i> Verified Certificate</h5>
+                    <p class="mb-1">Your certificate is verified with the following ID:</p>
+                    <div class="verification-id">{{ certificate_id }}</div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <button id="share-facebook" class="btn btn-facebook w-100">
-                        <i class="fab fa-facebook-f action-icon"></i> Facebook
-                    </button>
+
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ download_url }}" class="btn btn-primary w-100">
+                            <i class="fas fa-download action-icon"></i> Download Certificate
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <button id="add-to-linkedin" class="btn btn-linkedin w-100">
+                            <i class="fab fa-linkedin action-icon"></i> Add to LinkedIn
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <button id="share-twitter" class="btn btn-twitter w-100">
-                        <i class="fab fa-twitter action-icon"></i> Twitter
-                    </button>
+
+                <h3 class="section-title">Share Your Achievement</h3>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <button id="share-email" class="btn btn-secondary w-100">
+                            <i class="fas fa-envelope action-icon"></i> Email
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button id="share-facebook" class="btn btn-facebook w-100">
+                            <i class="fab fa-facebook-f action-icon"></i> Facebook
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button id="share-twitter" class="btn btn-twitter w-100">
+                            <i class="fab fa-twitter action-icon"></i> Twitter
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        {% else %}
+            <div class="not-found-container">
+                <div class="not-found-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <h2>Certificate Not Found</h2>
+                <p class="lead">{{ message|default("The certificate you're looking for could not be found.") }}</p>
+                <p>Please check the URL or contact the certificate issuer for assistance.</p>
+            </div>
+        {% endif %}
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
