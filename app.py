@@ -440,10 +440,17 @@ def view_certificate(certificate_id):
                               certificate_found=False, 
                               message="Certificate not found.")
     
+    # Create image URL for the template
+    certificate_image_url = url_for('get_certificate_image', certificate_id=certificate_id)
+    # Create download URL for the template
+    download_url = url_for('download_certificate', certificate_id=certificate_id)
+    
     return render_template('view_certificate.html',
                           certificate_found=True,
                           certificate_id=certificate_id,
-                          certificate_name=certificate_name)
+                          certificate_name=certificate_name,
+                          certificate_image_url=certificate_image_url,
+                          download_url=download_url)
 
 @app.route('/download_certificate/<certificate_id>')
 def download_certificate(certificate_id):
