@@ -13,9 +13,8 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from matplotlib import font_manager
 
-# Load environment variables from .env file if it exists
-if os.path.exists('.env'):
-    load_dotenv()
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'development-secret-key')
@@ -47,17 +46,11 @@ PREDEFINED_FONTS = [
     ('comicbd', 'Comic Sans MS Bold'),
 ]
 
-# Create necessary directories with proper error handling
-try:
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    os.makedirs(CERTIFICATE_FOLDER, exist_ok=True)
-    os.makedirs(os.path.join(UPLOAD_FOLDER, 'fonts'), exist_ok=True)
-    # Set permissions
-    os.chmod(UPLOAD_FOLDER, 0o777)
-    os.chmod(CERTIFICATE_FOLDER, 0o777)
-    os.chmod(os.path.join(UPLOAD_FOLDER, 'fonts'), 0o777)
-except Exception as e:
-    print(f"Error creating directories: {e}")
+
+# Create necessary directories
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(CERTIFICATE_FOLDER, exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_FOLDER, 'fonts'), exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['CERTIFICATE_FOLDER'] = CERTIFICATE_FOLDER
@@ -65,55 +58,6 @@ app.config['CERTIFICATE_FOLDER'] = CERTIFICATE_FOLDER
 # Helper function to check allowed file extensions
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-# Improved get_system_font_path function
-def get_system_font_path(font_name):
-    try:
-        # First check if it's in our uploaded fonts directory
-        custom_font_path = os.path.join(app.config['UPLOAD_FOLDER'], 'fonts', f"{font_name}.ttf")
-        if os.path.exists(custom_font_path):
-            return custom_font_path
-            
-        # Then try common system font locations
-        common_font_paths = [
-            # Linux
-            f"/usr/share/fonts/truetype/{font_name}.ttf",
-            f"/usr/share/fonts/TTF/{font_name}.ttf",
-            # Windows (in container)
-            f"/app/uploads/fonts/{font_name}.ttf",
-            # Default fonts
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/liberation/LiberationSans-Regular.ttf"
-        ]
-        
-        for path in common_font_paths:
-            if os.path.exists(path):
-                return path
-                
-        # Last resort: use matplotlib's font manager
-        font_path = font_manager.findfont(font_name)
-        return font_path
-    except Exception as e:
-        print(f"Font error: {e}")
-        # Fallback to a default font that should be in the container
-        default_fonts = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
-            "/app/uploads/fonts/arial.ttf"
-        ]
-        for font in default_fonts:
-            if os.path.exists(font):
-                return font
-        
-        # If all else fails, return the first font we can find
-        try:
-            font_dirs = font_manager.findSystemFonts()
-            if font_dirs:
-                return font_dirs[0]
-        except:
-            pass
-            
-        return None
 
 # Certificate generation function
 def generate_certificate(template_path, output_path, name, font_path, text_position, font_size, text_color="#444444"):
@@ -188,7 +132,7 @@ def batch_generate_certificates(template_path, excel_file, output_dir, font_path
             filename = f"{secure_filename(name)}_{certificate_id}.png"
             output_path = os.path.join(output_dir, filename)
             
-           # Generate the certificate
+            # Generate the certificate
             success = generate_certificate(
                 template_path, 
                 output_path, 
@@ -214,18 +158,15 @@ def batch_generate_certificates(template_path, excel_file, output_dir, font_path
 
     return certificate_paths, email_data
 
-# Enhanced send_certificate_email function with better error handling
+# Send email with certificate link
 def send_certificate_email(recipient_data, event_name="Fundamental of Web Development"):
     try:
         name = recipient_data['name']
         email = recipient_data['email']
         certificate_id = recipient_data['certificate_id']
         
-        print(f"Attempting to send email to {email}")
-        
         # Create verification link
         verification_link = url_for('view_certificate', certificate_id=certificate_id, _external=True)
-        print(f"Verification link: {verification_link}")
         
         # Create email
         msg = Message(
@@ -242,96 +183,26 @@ def send_certificate_email(recipient_data, event_name="Fundamental of Web Develo
         )
         
         # Send the email
-        print(f"Sending email via {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
         mail.send(msg)
         print(f"Email sent to {email}")
         return True
     
     except Exception as e:
-        import traceback
-        print(f"Error sending email to {email}: {str(e)}")
-        print(traceback.format_exc())
+        print(f"Error sending email to {email}: {e}")
         return False
+
+# Add this new function
+def get_system_font_path(font_name):
+    try:
+        font_path = font_manager.findfont(font_name)
+        return font_path
+    except:
+        return None
 
 # Routes
 @app.route('/')
 def index():
     return render_template('index.html')
-
-# Add health check endpoint for Render
-@app.route('/healthz', methods=['GET'])
-def health_check():
-    return "OK", 200
-
-# Add debug endpoint
-@app.route('/debug', methods=['GET'])
-def debug():
-    import sys
-    debug_info = {
-        'python_version': sys.version,
-        'environment_vars': {k: v for k, v in os.environ.items() if not k.lower().startswith('secret') and not k.lower().startswith('mail_password')},
-        'directories': os.listdir('.'),
-        'uploads_exists': os.path.exists('uploads'),
-        'certificates_exists': os.path.exists('certificates'),
-        'fonts_dir': os.listdir('uploads/fonts') if os.path.exists('uploads/fonts') else [],
-        'mail_configured': bool(app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']),
-        'template_dir': os.listdir('templates') if os.path.exists('templates') else []
-    }
-    return jsonify(debug_info)
-
-# Add email test endpoint
-@app.route('/test_email')
-def test_email():
-    try:
-        print("Starting email test...")
-        print(f"Mail config: Server={app.config['MAIL_SERVER']}, Port={app.config['MAIL_PORT']}, User={app.config['MAIL_USERNAME']}")
-        
-        recipient = app.config['MAIL_USERNAME']  # Send to yourself
-        
-        msg = Message(
-            subject="Test Email from Certificate Generator",
-            recipients=[recipient],
-            body="This is a test email to verify email functionality."
-        )
-        
-        print(f"Sending test email to {recipient}...")
-        mail.send(msg)
-        print("Email sent successfully!")
-        
-        return "Email test completed. Check logs and your inbox."
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Error sending test email: {str(e)}")
-        print(error_details)
-        return f"Error sending email: {str(e)}<br><pre>{error_details}</pre>"
-
-# Add SSL email test endpoint
-@app.route('/use_ssl_email')
-def use_ssl_email():
-    try:
-        # Reconfigure mail with SSL
-        app.config['MAIL_PORT'] = 465
-        app.config['MAIL_USE_TLS'] = False
-        app.config['MAIL_USE_SSL'] = True
-        
-        # Recreate mail object with new settings
-        global mail
-        mail = Mail(app)
-        
-        # Test sending
-        msg = Message(
-            subject="SSL Email Test from Certificate Generator",
-            recipients=[app.config['MAIL_USERNAME']],
-            body="This is a test email using SSL instead of TLS."
-        )
-        
-        mail.send(msg)
-        return "SSL email configuration applied and test email sent. Check your inbox."
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        return f"Error with SSL email: {str(e)}<br><pre>{error_details}</pre>"
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -404,18 +275,13 @@ def adjust():
         return redirect(url_for('index'))
     
     # Get preview data
-    try:
-        data = pd.read_excel(session['excel_path'])
-        if 'Name' not in data.columns:
-            flash('Excel file must contain a "Name" column')
-            return redirect(url_for('index'))
-        
-        # Get the first name for preview
-        preview_name = data['Name'].iloc[0] if not data.empty else "Sample Name"
-    except Exception as e:
-        print(f"Error reading Excel file: {e}")
-        flash('Error reading Excel file. Please upload again.')
+    data = pd.read_excel(session['excel_path'])
+    if 'Name' not in data.columns:
+        flash('Excel file must contain a "Name" column')
         return redirect(url_for('index'))
+    
+    # Get the first name for preview
+    preview_name = data['Name'].iloc[0] if not data.empty else "Sample Name"
     
     return render_template(
         'adjust.html', 
@@ -474,9 +340,6 @@ def generate():
     text_color = session.get('text_color', "#444444")
     event_name = request.form.get('event_name', 'Fundamental of Web Development held in GDG On Campus AIT')
     
-    # Add this logging
-    print(f"Send emails option: {request.form.get('send_emails')}")
-    
     # Generate certificates
     certificate_paths, email_data = batch_generate_certificates(
         template_path,
@@ -488,80 +351,112 @@ def generate():
         text_color
     )
     
-    # Check if certificates were generated
     if not certificate_paths:
-        flash('Error generating certificates. Please try again.')
+        flash('Error generating certificates')
         return redirect(url_for('index'))
     
-    # Send emails if requested
-    send_emails = True
+    # Store certificate data in session
+    session['email_data'] = email_data
+    session['event_name'] = event_name
     
-    # Add this logging
-    print(f"Send emails flag: {send_emails}")
-    print(f"Mail configuration: Server={app.config['MAIL_SERVER']}, Username={app.config['MAIL_USERNAME']}")
+    return redirect(url_for('send_emails'))
+
+@app.route('/send_emails')
+def send_emails():
+    # Check if email data exists in session
+    if 'email_data' not in session or not session['email_data']:
+        flash('No certificates to send')
+        return redirect(url_for('index'))
     
-    if send_emails:
-        email_success_count = 0
-        for recipient in email_data:
-            print(f"Attempting to send email to: {recipient['email']}")
-            if send_certificate_email(recipient, event_name):
-                email_success_count += 1
-        
-        print(f"Email sending complete. Success: {email_success_count}/{len(email_data)}")
-        flash(f'Successfully generated {len(certificate_paths)} certificates and sent {email_success_count} emails.')
-    else:
-        flash(f'Successfully generated {len(certificate_paths)} certificates. Emails were not sent.')
+    email_data = session['email_data']
+    event_name = session.get('event_name', 'Fundamental of Web Development held in GDG On Campus AIT')
     
+    # Send emails
+    success_count = 0
+    for recipient in email_data:
+        if send_certificate_email(recipient, event_name):
+            success_count += 1
+    
+    # Clear session data
+    for key in ['template_path', 'excel_path', 'font_path', 'text_position_x', 
+                'text_position_y', 'font_size', 'email_data', 'event_name']:
+        if key in session:
+            session.pop(key)
+    
+    flash(f'Successfully sent {success_count} out of {len(email_data)} emails')
     return redirect(url_for('index'))
 
 @app.route('/view_certificate/<certificate_id>')
 def view_certificate(certificate_id):
-    # Find the certificate file with this ID
+    # Find the certificate file
+    certificate_files = os.listdir(app.config['CERTIFICATE_FOLDER'])
     certificate_file = None
-    for filename in os.listdir(app.config['CERTIFICATE_FOLDER']):
+    
+    for filename in certificate_files:
         if certificate_id in filename:
             certificate_file = filename
             break
     
     if not certificate_file:
-        flash('Certificate not found.')
-        return redirect(url_for('index'))
-    
-    certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], certificate_file)
+        return "Certificate not found", 404
     
     # Extract name from filename
     name = certificate_file.split('_')[0]
     
-    return render_template('view_certificate.html', certificate_file=certificate_file, name=name)
+    # Get certificate path
+    certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], certificate_file)
+    
+    # Generate download URL
+    download_url = url_for('download_certificate', certificate_id=certificate_id)
+    
+    return render_template(
+        'view_certificate.html',
+        name=name,
+        certificate_id=certificate_id,
+        certificate_path=url_for('serve_certificate', certificate_id=certificate_id),
+        download_url=download_url
+    )
 
-@app.route('/certificates/<filename>')
-def get_certificate(filename):
-    return send_file(os.path.join(app.config['CERTIFICATE_FOLDER'], filename))
+@app.route('/serve_certificate/<certificate_id>')
+def serve_certificate(certificate_id):
+    # Find the certificate file
+    certificate_files = os.listdir(app.config['CERTIFICATE_FOLDER'])
+    certificate_file = None
+    
+    for filename in certificate_files:
+        if certificate_id in filename:
+            certificate_file = filename
+            break
+    
+    if not certificate_file:
+        return "Certificate not found", 404
+    
+    # Return the certificate file
+    return send_file(os.path.join(app.config['CERTIFICATE_FOLDER'], certificate_file))
 
-# Error handlers
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def server_error(e):
-    return render_template('500.html'), 500
-
-# Add mail configuration info endpoint
-@app.route('/mail_info')
-def mail_info():
-    mail_config = {
-        'MAIL_SERVER': app.config['MAIL_SERVER'],
-        'MAIL_PORT': app.config['MAIL_PORT'],
-        'MAIL_USE_TLS': app.config['MAIL_USE_TLS'],
-        'MAIL_USE_SSL': app.config['MAIL_USE_SSL'],
-        'MAIL_USERNAME': app.config['MAIL_USERNAME'],
-        'MAIL_DEFAULT_SENDER': app.config['MAIL_DEFAULT_SENDER'],
-        'MAIL_PASSWORD': 'REDACTED' if app.config['MAIL_PASSWORD'] else 'NOT SET'
-    }
-    return jsonify(mail_config)
+@app.route('/download_certificate/<certificate_id>')
+def download_certificate(certificate_id):
+    # Find the certificate file
+    certificate_files = os.listdir(app.config['CERTIFICATE_FOLDER'])
+    certificate_file = None
+    
+    for filename in certificate_files:
+        if certificate_id in filename:
+            certificate_file = filename
+            break
+    
+    if not certificate_file:
+        return "Certificate not found", 404
+    
+    # Get name from filename
+    name = certificate_file.split('_')[0]
+    
+    # Return the certificate file as a download
+    return send_file(
+        os.path.join(app.config['CERTIFICATE_FOLDER'], certificate_file),
+        as_attachment=True,
+        download_name=f"{name}_certificate.png"
+    )
 
 if __name__ == '__main__':
-    # Use PORT environment variable for compatibility with Render
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(debug=True)
