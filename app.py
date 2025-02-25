@@ -13,21 +13,15 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from matplotlib import font_manager
 from functools import lru_cache
+
 # Load environment variables from .env file
 load_dotenv()
 
+# Get base URL for deployed environment
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:5000')
+
 app = Flask(__name__)
-
 app.secret_key = os.getenv('SECRET_KEY', 'development-secret-key')
-app.config['SERVER_NAME'] = os.getenv('SERVER_NAME', 'localhost:5000')
-
-# With this:
-if os.getenv('FLASK_ENV') == 'production':
-    # For production environment (Render.com)
-    app.config['PREFERRED_URL_SCHEME'] = 'https'
-else:
-    # For local development
-    app.config['PREFERRED_URL_SCHEME'] = 'http'
 
 # Configure Flask-Mail
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -36,12 +30,12 @@ app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-app.config['MAIL_USE_SSL'] = False  # Add this line explicitly
+app.config['MAIL_USE_SSL'] = False  # Explicitly set SSL to False
 mail = Mail(app)
 
 # Configure upload folder
-UPLOAD_FOLDER = 'uploads'
-CERTIFICATE_FOLDER = 'certificates'
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
+CERTIFICATE_FOLDER = os.getenv('CERTIFICATE_FOLDER', 'certificates')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'xlsx', 'xls', 'ttf', 'otf'}
 
 # Add this after ALLOWED_EXTENSIONS definition
@@ -56,8 +50,7 @@ PREDEFINED_FONTS = [
     ('comicbd', 'Comic Sans MS Bold'),
 ]
 
-
-# Create necessary directories
+# Create necessary directories - ensure they exist on Render
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CERTIFICATE_FOLDER, exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_FOLDER, 'fonts'), exist_ok=True)
@@ -93,7 +86,7 @@ def generate_certificate(template_path, output_path, name, font_path, text_posit
         print(f"Error: {e}")
         return False
 
-# Generate preview image
+# Generate preview image with optimization for faster rendering
 def generate_preview(template_path, name, font_path, text_position, font_size, text_color="#444444"):
     try:
         # Open the certificate template image
@@ -126,6 +119,19 @@ def generate_preview(template_path, name, font_path, text_position, font_size, t
     except Exception as e:
         print(f"Error generating preview: {e}")
         return None
+
+# Cache preview generation for better performance
+@lru_cache(maxsize=32)
+def cached_preview(template_path, name, x, y, font_size, font_path, text_color):
+    text_position = (x, y)
+    return generate_preview(
+        template_path,
+        name,
+        font_path,
+        text_position,
+        font_size,
+        text_color
+    )
 
 # Batch generate certificates and return list of generated certificate paths
 def batch_generate_certificates(template_path, excel_file, output_dir, font_path, text_position, font_size, text_color="#444444"):
@@ -178,7 +184,7 @@ def batch_generate_certificates(template_path, excel_file, output_dir, font_path
 
     return certificate_paths, email_data
 
-# Send email with certificate link
+# Send email with certificate link using absolute URL for Render.com
 def send_certificate_email(recipient_data, event_name="Fundamental of Web Development"):
     try:
         name = recipient_data['name']
@@ -186,12 +192,7 @@ def send_certificate_email(recipient_data, event_name="Fundamental of Web Develo
         certificate_id = recipient_data['certificate_id']
         
         # Create verification link with absolute URL
-        if os.getenv('RENDER_EXTERNAL_URL'):
-            # When on Render
-            verification_link = f"{os.getenv('RENDER_EXTERNAL_URL')}/view_certificate/{certificate_id}"
-        else:
-            # Local development
-            verification_link = url_for('view_certificate', certificate_id=certificate_id, _external=True)
+        verification_link = f"{BASE_URL}/view_certificate/{certificate_id}"
         
         # Create email
         msg = Message(
@@ -228,6 +229,11 @@ def get_system_font_path(font_name):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# Simple test route to verify app is running
+@app.route('/test')
+def test():
+    return "Certificate app is running!"
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -317,18 +323,6 @@ def adjust():
         text_color=session.get('text_color', "#444444")
     )
 
-@lru_cache(maxsize=32)
-def cached_preview(template_path, name, x, y, font_size, font_path, text_color):
-    text_position = (x, y)
-    return generate_preview(
-        template_path,
-        name,
-        font_path,
-        text_position,
-        font_size,
-        text_color
-    )
-
 @app.route('/get_preview')
 def get_preview():
     # Get parameters from request
@@ -344,7 +338,7 @@ def get_preview():
     session['font_size'] = font_size
     session['text_color'] = text_color
     
-    # Use cached preview
+    # Use cached preview for better performance
     preview_io = cached_preview(
         session['template_path'],
         preview_name,
@@ -440,17 +434,15 @@ def view_certificate(certificate_id):
     # Extract name from filename
     name = certificate_file.split('_')[0]
     
-    # Get certificate path
-    certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], certificate_file)
-    
-    # Generate download URL
-    download_url = url_for('download_certificate', certificate_id=certificate_id)
+    # Generate URLs using absolute paths for Render.com
+    certificate_url = f"{BASE_URL}/serve_certificate/{certificate_id}"
+    download_url = f"{BASE_URL}/download_certificate/{certificate_id}"
     
     return render_template(
         'view_certificate.html',
         name=name,
         certificate_id=certificate_id,
-        certificate_path=url_for('serve_certificate', certificate_id=certificate_id),
+        certificate_path=certificate_url,
         download_url=download_url
     )
 
@@ -495,5 +487,12 @@ def download_certificate(certificate_id):
         download_name=f"{name}_certificate.png"
     )
 
+# Error handling for 404 errors
+@app.errorhandler(404)
+def page_not_found(e):
+    app.logger.error(f"404 error: {request.url}")
+    return "Page not found. Please check the URL and try again.", 404
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
