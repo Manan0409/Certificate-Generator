@@ -1,0 +1,9 @@
+flask==2.2.5
+pillow
+pandas
+openpyxl
+python-dotenv
+matplotlib
+flask_mail
+gunicorn
+werkzeug

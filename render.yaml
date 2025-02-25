@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: certificate-generator
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MAIL_SERVER
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USE_TLS
+        value: True
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+    disk:
+      name: certificates-data
+      mountPath: /app/certificates
+      sizeGB: 1
+    disk:
+      name: uploads-data
+      mountPath: /app/uploads
+      sizeGB: 1

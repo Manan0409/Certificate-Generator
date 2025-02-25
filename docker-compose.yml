@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  certificate-app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./certificates:/app/certificates
+      - ./templates:/app/templates
+      - ./static:/app/static
+    env_file:
+      - .env
+    restart: always

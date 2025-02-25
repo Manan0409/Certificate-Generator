@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Certificate</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .email-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 25px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .header h1 {
+            color: #4285F4;
+            margin-bottom: 10px;
+        }
+        .content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4285F4;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .footer {
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+            margin-top: 30px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Congratulations, {{ name }}!</h1>
+            <p>Your credential for {{ event_name }} is ready!</p>
+        </div>
+        
+        <div class="content">
+            <p>Your achievement is available in an online format so that you can retrieve it anywhere, anytime, and use it in a variety of ways:</p>
+            <ul>
+                <li>add it to your LinkedIn profile to get better job opportunities</li>
+                <li>share it on social media to showcase your skills</li>
+                <li>download it in PDF format for printing</li>
+            </ul>
+        </div>
+        
+        <div class="button-container">
+            <a href="{{ verification_link }}" class="button">VIEW CREDENTIALS</a>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated email, please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>

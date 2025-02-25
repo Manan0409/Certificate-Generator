@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adjust Certificate Text</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .form-container {
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .preview-container {
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .preview-img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+        }
+        .form-label {
+            font-weight: 600;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+        }
+        .slider-container input[type="range"] {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .slider-container input[type="number"] {
+            width: 80px;
+        }
+        .controls-container {
+            margin-bottom: 20px;
+        }
+        .flash-message {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Adjust Certificate Text Position</h1>
+            <p class="lead">Adjust the position, size, and color of the text on the certificate</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert alert-info flash-message">
+            <ul class="mb-0">
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-md-5">
+                <div class="form-container">
+                    <div class="controls-container">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Preview Name</label>
+                            <input type="text" class="form-control" id="name" value="{{ preview_name }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="x-pos" class="form-label">X Position</label>
+                            <div class="slider-container">
+                                <input type="range" class="form-range" id="x-range" min="0" max="2000" value="{{ text_position_x }}">
+                                <input type="number" class="form-control" id="x-pos" value="{{ text_position_x }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="y-pos" class="form-label">Y Position</label>
+                            <div class="slider-container">
+                                <input type="range" class="form-range" id="y-range" min="0" max="1500" value="{{ text_position_y }}">
+                                <input type="number" class="form-control" id="y-pos" value="{{ text_position_y }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="font-size" class="form-label">Font Size</label>
+                            <div class="slider-container">
+                                <input type="range" class="form-range" id="font-size-range" min="10" max="150" value="{{ font_size }}">
+                                <input type="number" class="form-control" id="font-size" value="{{ font_size }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="text-color" class="form-label">Text Color</label>
+                            <input type="color" class="form-control form-control-color" id="text-color" value="{{ text_color }}" title="Choose text color">
+                        </div>
+                    </div>
+                    
+                    <form action="{{ url_for('generate') }}" method="post">
+                        <div class="mb-4">
+                            <label for="event-name" class="form-label">Event Name</label>
+                            <input type="text" class="form-control" id="event-name" name="event_name" value="Fundamental of Web Development held in GDG On Campus AIT">
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">Generate Certificates & Send Emails</button>
+                            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Start Over</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="col-md-7">
+                <div class="preview-container">
+                    <h4>Certificate Preview</h4>
+                    <img id="preview-img" src="{{ url_for('get_preview') }}" alt="Certificate Preview" class="preview-img">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get elements
+            const xRange = document.getElementById('x-range');
+            const xPos = document.getElementById('x-pos');
+            const yRange = document.getElementById('y-range');
+            const yPos = document.getElementById('y-pos');
+            const fontSizeRange = document.getElementById('font-size-range');
+            const fontSize = document.getElementById('font-size');
+            const textColor = document.getElementById('text-color');
+            const nameInput = document.getElementById('name');
+            const previewImg = document.getElementById('preview-img');
+            
+            // Function to update preview
+            function updatePreview() {
+                const x = xPos.value;
+                const y = yPos.value;
+                const size = fontSize.value;
+                const color = textColor.value;
+                const name = encodeURIComponent(nameInput.value);
+                
+                previewImg.src = `{{ url_for('get_preview') }}?x=${x}&y=${y}&font_size=${size}&name=${name}&text_color=${encodeURIComponent(color)}`;
+            }
+            
+            // Sync range and number input
+            xRange.addEventListener('input', function() {
+                xPos.value = xRange.value;
+                updatePreview();
+            });
+            
+            xPos.addEventListener('input', function() {
+                xRange.value = xPos.value;
+                updatePreview();
+            });
+            
+            yRange.addEventListener('input', function() {
+                yPos.value = yRange.value;
+                updatePreview();
+            });
+            
+            yPos.addEventListener('input', function() {
+                yRange.value = yPos.value;
+                updatePreview();
+            });
+            
+            fontSizeRange.addEventListener('input', function() {
+                fontSize.value = fontSizeRange.value;
+                updatePreview();
+            });
+            
+            fontSize.addEventListener('input', function() {
+                fontSizeRange.value = fontSize.value;
+                updatePreview();
+            });
+            
+            textColor.addEventListener('input', updatePreview);
+            nameInput.addEventListener('input', updatePreview);
+            
+            // Initial update
+            updatePreview();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/static/script.js"></script>
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            background-color: #f8f9fa;
+        }
+        .form-container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 25px;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .file-input-label {
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .help-text {
+            color: #6c757d;
+            font-size: 0.875rem;
+            margin-top: 5px;
+        }
+        .font-selection-card {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+        }
+        .font-selection-card .form-label {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .or-divider {
+            text-align: center;
+            margin: 15px 0;
+            color: #6c757d;
+            font-weight: 500;
+            position: relative;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #dee2e6;
+            margin: auto;
+        }
+        .or-divider::before {
+            margin-right: 10px;
+        }
+        .or-divider::after {
+            margin-left: 10px;
+        }
+        .btn-upload {
+            background-color: #0d6efd;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1 class="display-4">Certificate Generator</h1>
+            <p class="lead text-muted">Automated certificate generation and distribution system</p>
+        </div>
+
+        <div class="form-container">
+            <form action="{{ url_for('upload_files') }}" method="post" enctype="multipart/form-data">
+                <!-- Certificate Template Upload -->
+                <div class="mb-4">
+                    <label for="template" class="form-label file-input-label">
+                        <i class="fas fa-image me-2"></i>Certificate Template (PNG/JPG)
+                    </label>
+                    <input type="file" class="form-control" id="template" name="template" accept=".png,.jpg,.jpeg" required>
+                    <div class="help-text">Upload the certificate template image (PNG or JPG format)</div>
+                </div>
+
+                <!-- Excel File Upload -->
+                <div class="mb-4">
+                    <label for="excel_file" class="form-label file-input-label">
+                        <i class="fas fa-file-excel me-2"></i>Excel File
+                    </label>
+                    <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                    <div class="help-text">Upload an Excel file with columns "Name" and "Email"</div>
+                </div>
+
+                <!-- Font Selection Section -->
+                <div class="font-selection-card">
+                    <label class="form-label">
+                        <i class="fas fa-font me-2"></i>Font Selection
+                    </label>
+
+                    <!-- Option 1: Upload Custom Font -->
+                    <div class="mb-3">
+                        <label class="form-label">Upload Custom Font</label>
+                        <input type="file" class="form-control" name="font_file" accept=".ttf,.otf">
+                        <div class="help-text">Supported formats: TTF, OTF</div>
+                    </div>
+
+                    <!-- OR Divider -->
+                    <div class="or-divider">
+                        OR
+                    </div>
+
+                    <!-- Option 2: Select Predefined Font -->
+                    <div class="mb-3">
+                        <label class="form-label">Choose Predefined Font</label>
+                        <select class="form-select" name="predefined_font">
+                            <option value="">Select a font...</option>
+                            <option value="allura">Allura</option>
+                            <option value="arial">Arial</option>
+                            <option value="bahnschrift">Bahnschrift</option>
+                            <option value="bebas">Bebas</option>
+                            <option value="birds-of-paradise">Birds of Paradise Personal use</option>
+                            <option value="blackberry-jam">Blackberry Jam Personal Use</option>
+                            <option value="calibri">Calibri</option>
+                            <option value="cambria">Cambria</option>
+                            <option value="candara">Candara</option>
+                            <option value="champie-trial">Champie Trial</option>
+                            <option value="cinematografica">Cinematografica</option>
+                            <option value="comic-sans-ms">Comic Sans MS</option>
+                            <option value="consolas">Consolas</option>
+                            <option value="constantia">Constantia</option>
+                            <option value="corbel">Corbel</option>
+                            <option value="courier-new">Courier New</option>
+                            <option value="cream-cake">Cream Cake</option>
+                            <option value="ebrima">Ebrima</option>
+                            <option value="fontspring-demo-juana">FONTSPRING DEMO - Juana</option>
+                            <option value="fontspring-demo-juana-alt">FONTSPRING DEMO - Juana Alt</option>
+                            <option value="fontspring-demo-juana-alt-black">FONTSPRING DEMO - Juana Alt Black</option>
+                            <option value="fontspring-demo-juana-alt-bold">FONTSPRING DEMO - Juana Alt Bold</option>
+                            <option value="fontspring-demo-juana-alt-extralight">FONTSPRING DEMO - Juana Alt ExtraLight</option>
+                            <option value="fontspring-demo-juana-alt-light">FONTSPRING DEMO - Juana Alt Light</option>
+                            <option value="fontspring-demo-juana-alt-medium">FONTSPRING DEMO - Juana Alt Medium</option>
+                            <option value="fontspring-demo-juana-alt-semibold">FONTSPRING DEMO - Juana Alt SemiBold</option>
+                            <option value="fontspring-demo-juana-alt-thin">FONTSPRING DEMO - Juana Alt Thin</option>
+                            <option value="fontspring-demo-juana-black">FONTSPRING DEMO - Juana Black</option>
+                            <option value="fontspring-demo-juana-black-it">FONTSPRING DEMO - Juana Black It</option>
+                            <option value="fontspring-demo-juana-bold">FONTSPRING DEMO - Juana Bold</option>
+                            <option value="fontspring-demo-juana-bold-it">FONTSPRING DEMO - Juana Bold It</option>
+                            <option value="fontspring-demo-juana-extralight">FONTSPRING DEMO - Juana ExtraLight</option>
+                            <option value="fontspring-demo-juana-extralight-it">FONTSPRING DEMO - Juana ExtraLight It</option>
+                            <option value="fontspring-demo-juana-it">FONTSPRING DEMO - Juana It</option>
+                            <option value="fontspring-demo-juana-light">FONTSPRING DEMO - Juana Light</option>
+                            <option value="fontspring-demo-juana-light-it">FONTSPRING DEMO - Juana Light It</option>
+                            <option value="fontspring-demo-juana-medium">FONTSPRING DEMO - Juana Medium</option>
+                            <option value="fontspring-demo-juana-medium-it">FONTSPRING DEMO - Juana Medium It</option>
+                            <option value="fontspring-demo-juana-semibold">FONTSPRING DEMO - Juana SemiBold</option>
+                            <option value="fontspring-demo-juana-semibold-it">FONTSPRING DEMO - Juana SemiBold It</option>
+                            <option value="fontspring-demo-juana-thin">FONTSPRING DEMO - Juana Thin</option>
+                            <option value="fontspring-demo-juana-thin-it">FONTSPRING DEMO - Juana Thin It</option>
+                            <option value="franklin-gothic">Franklin Gothic</option>
+                            <option value="franklin-gothic-medium">Franklin Gothic Medium</option>
+                            <option value="gabriola">Gabriola</option>
+                            <option value="gadugi">Gadugi</option>
+                            <option value="gazpacho">Gazpacho</option>
+                            <option value="georgia">Georgia</option>
+                            <option value="google-sans-display">Google Sans Display</option>
+                            <option value="granny">Granny</option>
+                            <option value="great-vibes">Great Vibes</option>
+                            <option value="highrise">Highrise</option>
+                            <option value="highrise-bold">Highrise Bold</option>
+                            <option value="highrise-demo">Highrise Demo</option>
+                            <option value="impact">Impact</option>
+                            <option value="ink-free">Ink Free</option>
+                            <option value="inter">Inter</option>
+                            <option value="javanese-text">Javanese Text</option>
+                            <option value="jumper-personal-use-only">Jumper PERSONAL USE ONLY</option>
+                            <option value="kenyan-coffee">Kenyan Coffee</option>
+                            <option value="lato">Lato</option>
+                            <option value="leelawadee-ui">Leelawadee UI</option>
+                            <option value="lofty-goals">Lofty Goals</option>
+                            <option value="lucida-console">Lucida Console</option>
+                            <option value="lucida-sans-unicode">Lucida Sans Unicode</option>
+                            <option value="ms-gothic">MS Gothic</option>
+                            <option value="mv-boli">MV Boli</option>
+                            <option value="malgun-gothic">Malgun Gothic</option>
+                        </select>
+                        <div class="help-text">Choose from common system fonts</div>
+                    </div>
+                </div>
+                <!-- Submit Button -->
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-upload btn-lg">
+                        <i class="fas fa-upload me-2"></i>Upload Files
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

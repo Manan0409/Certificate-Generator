@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Certificate</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1000px;
+        }
+        .certificate-container {
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .certificate-img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .actions-container {
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn-linkedin {
+            background-color: #0077b5;
+            color: white;
+        }
+        .btn-facebook {
+            background-color: #3b5998;
+            color: white;
+        }
+        .btn-twitter {
+            background-color: #1da1f2;
+            color: white;
+        }
+        .action-icon {
+            margin-right: 8px;
+        }
+        .section-title {
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .verification-info {
+            background-color: #e9f7ef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .verification-id {
+            font-family: monospace;
+            padding: 5px 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Congratulations, {{ name }}!</h1>
+            <p class="lead">Your achievement has been verified.</p>
+        </div>
+
+        <div class="certificate-container">
+            <div class="text-center">
+                <img src="{{ certificate_path }}" alt="Your Certificate" class="certificate-img">
+            </div>
+        </div>
+
+        <div class="actions-container">
+            <h3 class="section-title">Certificate Actions</h3>
+
+            <div class="verification-info mb-4">
+                <h5><i class="fas fa-check-circle text-success"></i> Verified Certificate</h5>
+                <p class="mb-1">Your certificate is verified with the following ID:</p>
+                <div class="verification-id">{{ certificate_id }}</div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <a href="{{ download_url }}" class="btn btn-primary w-100">
+                        <i class="fas fa-download action-icon"></i> Download Certificate
+                    </a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <button id="add-to-linkedin" class="btn btn-linkedin w-100">
+                        <i class="fab fa-linkedin action-icon"></i> Add to LinkedIn
+                    </button>
+                </div>
+            </div>
+
+            <h3 class="section-title">Share Your Achievement</h3>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <button id="share-email" class="btn btn-secondary w-100">
+                        <i class="fas fa-envelope action-icon"></i> Email
+                    </button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <button id="share-facebook" class="btn btn-facebook w-100">
+                        <i class="fab fa-facebook-f action-icon"></i> Facebook
+                    </button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <button id="share-twitter" class="btn btn-twitter w-100">
+                        <i class="fab fa-twitter action-icon"></i> Twitter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // LinkedIn Add Certificate
+            document.getElementById('add-to-linkedin').addEventListener('click', function() {
+                // LinkedIn doesn't have a direct API for adding certificates, so we open LinkedIn in a new tab
+                window.open('https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME', '_blank');
+            });
+
+            // Email Share
+            document.getElementById('share-email').addEventListener('click', function() {
+                const subject = encodeURIComponent('Check out my new certificate!');
+                const body = encodeURIComponent('I just earned a certificate! Check it out here: ' + window.location.href);
+                window.location.href = `mailto:?subject=${subject}&body=${body}`;
+            });
+
+            // Facebook Share
+            document.getElementById('share-facebook').addEventListener('click', function() {
+                const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`;
+                window.open(shareUrl, '_blank', 'width=600,height=400');
+            });
+
+            // Twitter Share
+            document.getElementById('share-twitter').addEventListener('click', function() {
+                const text = encodeURIComponent('I just earned a certificate! Check it out here:');
+                const shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.href)}`;
+                window.open(shareUrl, '_blank', 'width=600,height=400');
+            });
+        });
+    </script>
+</body>
+</html>
