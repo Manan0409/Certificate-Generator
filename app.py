@@ -188,9 +188,7 @@ def batch_generate_certificates(template_path, excel_file, output_dir, font_path
             filename = f"{secure_filename(name)}_{certificate_id}.png"
             output_path = os.path.join(output_dir, filename)
             
-          # Continuing the app.py file:
-
-            # Generate the certificate
+           # Generate the certificate
             success = generate_certificate(
                 template_path, 
                 output_path, 
@@ -216,15 +214,18 @@ def batch_generate_certificates(template_path, excel_file, output_dir, font_path
 
     return certificate_paths, email_data
 
-# Send email with certificate link
+# Enhanced send_certificate_email function with better error handling
 def send_certificate_email(recipient_data, event_name="Fundamental of Web Development"):
     try:
         name = recipient_data['name']
         email = recipient_data['email']
         certificate_id = recipient_data['certificate_id']
         
+        print(f"Attempting to send email to {email}")
+        
         # Create verification link
         verification_link = url_for('view_certificate', certificate_id=certificate_id, _external=True)
+        print(f"Verification link: {verification_link}")
         
         # Create email
         msg = Message(
@@ -241,16 +242,19 @@ def send_certificate_email(recipient_data, event_name="Fundamental of Web Develo
         )
         
         # Send the email
+        print(f"Sending email via {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
         mail.send(msg)
         print(f"Email sent to {email}")
         return True
     
     except Exception as e:
-        print(f"Error sending email to {email}: {e}")
+        import traceback
+        print(f"Error sending email to {email}: {str(e)}")
+        print(traceback.format_exc())
         return False
 
 # Routes
-@app.route('/', methods=['GET'])
+@app.route('/')
 def index():
     return render_template('index.html')
 
@@ -274,6 +278,60 @@ def debug():
         'template_dir': os.listdir('templates') if os.path.exists('templates') else []
     }
     return jsonify(debug_info)
+
+# Add email test endpoint
+@app.route('/test_email')
+def test_email():
+    try:
+        print("Starting email test...")
+        print(f"Mail config: Server={app.config['MAIL_SERVER']}, Port={app.config['MAIL_PORT']}, User={app.config['MAIL_USERNAME']}")
+        
+        recipient = app.config['MAIL_USERNAME']  # Send to yourself
+        
+        msg = Message(
+            subject="Test Email from Certificate Generator",
+            recipients=[recipient],
+            body="This is a test email to verify email functionality."
+        )
+        
+        print(f"Sending test email to {recipient}...")
+        mail.send(msg)
+        print("Email sent successfully!")
+        
+        return "Email test completed. Check logs and your inbox."
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error sending test email: {str(e)}")
+        print(error_details)
+        return f"Error sending email: {str(e)}<br><pre>{error_details}</pre>"
+
+# Add SSL email test endpoint
+@app.route('/use_ssl_email')
+def use_ssl_email():
+    try:
+        # Reconfigure mail with SSL
+        app.config['MAIL_PORT'] = 465
+        app.config['MAIL_USE_TLS'] = False
+        app.config['MAIL_USE_SSL'] = True
+        
+        # Recreate mail object with new settings
+        global mail
+        mail = Mail(app)
+        
+        # Test sending
+        msg = Message(
+            subject="SSL Email Test from Certificate Generator",
+            recipients=[app.config['MAIL_USERNAME']],
+            body="This is a test email using SSL instead of TLS."
+        )
+        
+        mail.send(msg)
+        return "SSL email configuration applied and test email sent. Check your inbox."
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        return f"Error with SSL email: {str(e)}<br><pre>{error_details}</pre>"
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -338,7 +396,7 @@ def upload_files():
     
     return redirect(url_for('adjust'))
 
-@app.route('/adjust', methods=['GET'])
+@app.route('/adjust')
 def adjust():
     # Check if required session variables exist
     if not all(key in session for key in ['template_path', 'excel_path', 'font_path']):
@@ -368,7 +426,7 @@ def adjust():
         text_color=session.get('text_color', "#444444")
     )
 
-@app.route('/get_preview', methods=['GET'])
+@app.route('/get_preview')
 def get_preview():
     # Get parameters from request
     text_position_x = int(request.args.get('x', 760))
@@ -416,6 +474,9 @@ def generate():
     text_color = session.get('text_color', "#444444")
     event_name = request.form.get('event_name', 'Fundamental of Web Development held in GDG On Campus AIT')
     
+    # Add this logging
+    print(f"Send emails option: {request.form.get('send_emails')}")
+    
     # Generate certificates
     certificate_paths, email_data = batch_generate_certificates(
         template_path,
@@ -433,13 +494,20 @@ def generate():
         return redirect(url_for('index'))
     
     # Send emails if requested
-    send_emails = request.form.get('send_emails') == 'on'
+    send_emails = True
+    
+    # Add this logging
+    print(f"Send emails flag: {send_emails}")
+    print(f"Mail configuration: Server={app.config['MAIL_SERVER']}, Username={app.config['MAIL_USERNAME']}")
+    
     if send_emails:
         email_success_count = 0
         for recipient in email_data:
+            print(f"Attempting to send email to: {recipient['email']}")
             if send_certificate_email(recipient, event_name):
                 email_success_count += 1
         
+        print(f"Email sending complete. Success: {email_success_count}/{len(email_data)}")
         flash(f'Successfully generated {len(certificate_paths)} certificates and sent {email_success_count} emails.')
     else:
         flash(f'Successfully generated {len(certificate_paths)} certificates. Emails were not sent.')
@@ -478,6 +546,20 @@ def page_not_found(e):
 @app.errorhandler(500)
 def server_error(e):
     return render_template('500.html'), 500
+
+# Add mail configuration info endpoint
+@app.route('/mail_info')
+def mail_info():
+    mail_config = {
+        'MAIL_SERVER': app.config['MAIL_SERVER'],
+        'MAIL_PORT': app.config['MAIL_PORT'],
+        'MAIL_USE_TLS': app.config['MAIL_USE_TLS'],
+        'MAIL_USE_SSL': app.config['MAIL_USE_SSL'],
+        'MAIL_USERNAME': app.config['MAIL_USERNAME'],
+        'MAIL_DEFAULT_SENDER': app.config['MAIL_DEFAULT_SENDER'],
+        'MAIL_PASSWORD': 'REDACTED' if app.config['MAIL_PASSWORD'] else 'NOT SET'
+    }
+    return jsonify(mail_config)
 
 if __name__ == '__main__':
     # Use PORT environment variable for compatibility with Render
