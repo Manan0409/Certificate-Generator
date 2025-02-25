@@ -194,7 +194,7 @@ def send_certificate_email(recipient_data, event_name="Fundamental of Web Develo
         # Create verification link with absolute URL
         verification_link = f"{BASE_URL}/view_certificate/{certificate_id}"
         
-        # Create email
+       # Create email
         msg = Message(
             subject=f"Your Certificate for {event_name}",
             recipients=[email]
@@ -326,11 +326,11 @@ def adjust():
 @app.route('/get_preview')
 def get_preview():
     # Get parameters from request
-    text_position_x = int(request.args.get('x', 760))
-    text_position_y = int(request.args.get('y', 538))
-    font_size = int(request.args.get('font_size', 53))
+    text_position_x = int(request.args.get('x', session.get('text_position_x', 760)))
+    text_position_y = int(request.args.get('y', session.get('text_position_y', 538)))
+    font_size = int(request.args.get('font_size', session.get('font_size', 53)))
     preview_name = request.args.get('name', 'Sample Name')
-    text_color = request.args.get('text_color', "#444444")
+    text_color = request.args.get('text_color', session.get('text_color', "#444444"))
     
     # Update session
     session['text_position_x'] = text_position_x
@@ -338,161 +338,158 @@ def get_preview():
     session['font_size'] = font_size
     session['text_color'] = text_color
     
-    # Use cached preview for better performance
-    preview_io = cached_preview(
-        session['template_path'],
-        preview_name,
-        text_position_x,
-        text_position_y,
-        font_size,
-        session['font_path'],
-        text_color
-    )
+    # Check if required session variables exist
+    if not all(key in session for key in ['template_path', 'font_path']):
+        return jsonify({'error': 'Missing template or font path'}), 400
     
-    if preview_io:
+    # Generate preview
+    try:
+        text_position = (text_position_x, text_position_y)
+        preview_io = generate_preview(
+            session['template_path'],
+            preview_name,
+            session['font_path'],
+            text_position,
+            font_size,
+            text_color
+        )
+        
+        if not preview_io:
+            return jsonify({'error': 'Failed to generate preview'}), 500
+        
+        # Return the image
         return send_file(preview_io, mimetype='image/png')
-    else:
-        return "Error generating preview", 500
+    except Exception as e:
+        print(f"Preview generation error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    # Check if required session variables exist
-    if not all(key in session for key in ['template_path', 'excel_path', 'font_path', 
-                                         'text_position_x', 'text_position_y', 'font_size']):
-        flash('Missing required files or settings. Please start over.')
+    """Generate certificates based on adjusted settings"""
+    try:
+        # Get parameters from form
+        text_position_x = int(request.form.get('text_position_x', session.get('text_position_x', 760)))
+        text_position_y = int(request.form.get('text_position_y', session.get('text_position_y', 538)))
+        font_size = int(request.form.get('font_size', session.get('font_size', 53)))
+        text_color = request.form.get('text_color', session.get('text_color', "#444444"))
+        event_name = request.form.get('event_name', "Certificate of Completion")
+        
+        # Get paths from session
+        template_path = session.get('template_path')
+        excel_path = session.get('excel_path')
+        font_path = session.get('font_path')
+        
+        # Validate paths
+        if not all([template_path, excel_path, font_path]):
+            flash('Missing required files. Please upload again.')
+            return redirect(url_for('index'))
+        
+        # Set text position
+        text_position = (text_position_x, text_position_y)
+        
+        # Generate certificates
+        certificate_paths, email_data = batch_generate_certificates(
+            template_path,
+            excel_path,
+            app.config['CERTIFICATE_FOLDER'],
+            font_path,
+            text_position,
+            font_size,
+            text_color
+        )
+        
+        if not certificate_paths:
+            flash('No certificates were generated. Please check your files and try again.')
+            return redirect(url_for('index'))
+        
+        # Send emails
+        success_count = 0
+        for recipient in email_data:
+            if send_certificate_email(recipient, event_name):
+                success_count += 1
+        
+      # Flash result message
+        if success_count == len(email_data):
+            flash(f'Successfully generated {len(certificate_paths)} certificates and sent all {success_count} emails!')
+        else:
+            flash(f'Generated {len(certificate_paths)} certificates. Sent {success_count} out of {len(email_data)} emails. Some emails may have failed.')
+        
         return redirect(url_for('index'))
-    
-    # Get parameters
-    template_path = session['template_path']
-    excel_path = session['excel_path']
-    font_path = session['font_path']
-    text_position = (session['text_position_x'], session['text_position_y'])
-    font_size = session['font_size']
-    text_color = session.get('text_color', "#444444")
-    event_name = request.form.get('event_name', 'Fundamental of Web Development held in GDG On Campus AIT')
-    
-    # Generate certificates
-    certificate_paths, email_data = batch_generate_certificates(
-        template_path,
-        excel_path,
-        app.config['CERTIFICATE_FOLDER'],
-        font_path,
-        text_position,
-        font_size,
-        text_color
-    )
-    
-    if not certificate_paths:
-        flash('Error generating certificates')
+        
+    except Exception as e:
+        flash(f'Error generating certificates: {str(e)}')
         return redirect(url_for('index'))
-    
-    # Store certificate data in session
-    session['email_data'] = email_data
-    session['event_name'] = event_name
-    
-    return redirect(url_for('send_emails'))
-
-@app.route('/send_emails')
-def send_emails():
-    # Check if email data exists in session
-    if 'email_data' not in session or not session['email_data']:
-        flash('No certificates to send')
-        return redirect(url_for('index'))
-    
-    email_data = session['email_data']
-    event_name = session.get('event_name', 'Fundamental of Web Development held in GDG On Campus AIT')
-    
-    # Send emails
-    success_count = 0
-    for recipient in email_data:
-        if send_certificate_email(recipient, event_name):
-            success_count += 1
-    
-    # Clear session data
-    for key in ['template_path', 'excel_path', 'font_path', 'text_position_x', 
-                'text_position_y', 'font_size', 'email_data', 'event_name']:
-        if key in session:
-            session.pop(key)
-    
-    flash(f'Successfully sent {success_count} out of {len(email_data)} emails')
-    return redirect(url_for('index'))
 
 @app.route('/view_certificate/<certificate_id>')
 def view_certificate(certificate_id):
-    # Find the certificate file
-    certificate_files = os.listdir(app.config['CERTIFICATE_FOLDER'])
-    certificate_file = None
+    """Display a certificate for verification"""
+    # Find the certificate with the given ID
+    certificate_path = None
+    certificate_name = None
     
-    for filename in certificate_files:
+    # Check all files in the certificate folder
+    for filename in os.listdir(app.config['CERTIFICATE_FOLDER']):
         if certificate_id in filename:
-            certificate_file = filename
+            certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], filename)
+            # Extract name from filename (remove the UUID part)
+            certificate_name = filename.split('_')[0].replace('-', ' ').title()
             break
     
-    if not certificate_file:
-        return "Certificate not found", 404
+    if not certificate_path:
+        return render_template('view_certificate.html', 
+                              certificate_found=False, 
+                              message="Certificate not found.")
     
-    # Extract name from filename
-    name = certificate_file.split('_')[0]
-    
-    # Generate URLs using absolute paths for Render.com
-    certificate_url = f"{BASE_URL}/serve_certificate/{certificate_id}"
-    download_url = f"{BASE_URL}/download_certificate/{certificate_id}"
-    
-    return render_template(
-        'view_certificate.html',
-        name=name,
-        certificate_id=certificate_id,
-        certificate_path=certificate_url,
-        download_url=download_url
-    )
-
-@app.route('/serve_certificate/<certificate_id>')
-def serve_certificate(certificate_id):
-    # Find the certificate file
-    certificate_files = os.listdir(app.config['CERTIFICATE_FOLDER'])
-    certificate_file = None
-    
-    for filename in certificate_files:
-        if certificate_id in filename:
-            certificate_file = filename
-            break
-    
-    if not certificate_file:
-        return "Certificate not found", 404
-    
-    # Return the certificate file
-    return send_file(os.path.join(app.config['CERTIFICATE_FOLDER'], certificate_file))
+    return render_template('view_certificate.html',
+                          certificate_found=True,
+                          certificate_id=certificate_id,
+                          certificate_name=certificate_name)
 
 @app.route('/download_certificate/<certificate_id>')
 def download_certificate(certificate_id):
-    # Find the certificate file
-    certificate_files = os.listdir(app.config['CERTIFICATE_FOLDER'])
-    certificate_file = None
+    """Allow downloading a certificate"""
+    # Find the certificate with the given ID
+    certificate_path = None
     
-    for filename in certificate_files:
+    # Check all files in the certificate folder
+    for filename in os.listdir(app.config['CERTIFICATE_FOLDER']):
         if certificate_id in filename:
-            certificate_file = filename
+            certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], filename)
             break
     
-    if not certificate_file:
-        return "Certificate not found", 404
+    if not certificate_path:
+        flash('Certificate not found.')
+        return redirect(url_for('index'))
     
-    # Get name from filename
-    name = certificate_file.split('_')[0]
-    
-    # Return the certificate file as a download
-    return send_file(
-        os.path.join(app.config['CERTIFICATE_FOLDER'], certificate_file),
-        as_attachment=True,
-        download_name=f"{name}_certificate.png"
-    )
+    return send_file(certificate_path, as_attachment=True)
 
-# Error handling for 404 errors
+@app.route('/get_certificate_image/<certificate_id>')
+def get_certificate_image(certificate_id):
+    """Serve the certificate image for the view page"""
+    # Find the certificate with the given ID
+    certificate_path = None
+    
+    # Check all files in the certificate folder
+    for filename in os.listdir(app.config['CERTIFICATE_FOLDER']):
+        if certificate_id in filename:
+            certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], filename)
+            break
+    
+    if not certificate_path:
+        return jsonify({'error': 'Certificate not found'}), 404
+    
+    return send_file(certificate_path)
+
+# Error handlers
 @app.errorhandler(404)
 def page_not_found(e):
-    app.logger.error(f"404 error: {request.url}")
-    return "Page not found. Please check the URL and try again.", 404
+    return render_template('index.html'), 404
 
+@app.errorhandler(500)
+def server_error(e):
+    return render_template('index.html'), 500
+
+# Run the app
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
