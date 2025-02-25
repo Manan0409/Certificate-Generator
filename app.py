@@ -12,12 +12,22 @@ from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from matplotlib import font_manager
-
+from functools import lru_cache
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
+
 app.secret_key = os.getenv('SECRET_KEY', 'development-secret-key')
+app.config['SERVER_NAME'] = os.getenv('SERVER_NAME', 'localhost:5000')
+
+# With this:
+if os.getenv('FLASK_ENV') == 'production':
+    # For production environment (Render.com)
+    app.config['PREFERRED_URL_SCHEME'] = 'https'
+else:
+    # For local development
+    app.config['PREFERRED_URL_SCHEME'] = 'http'
 
 # Configure Flask-Mail
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -89,18 +99,28 @@ def generate_preview(template_path, name, font_path, text_position, font_size, t
         # Open the certificate template image
         template = Image.open(template_path)
         
+        # Resize for preview (smaller image for faster transfer)
+        preview_width = 800  # Adjust this value as needed
+        ratio = preview_width / template.width
+        preview_height = int(template.height * ratio)
+        template = template.resize((preview_width, preview_height))
+        
+        # Adjust text position based on resize ratio
+        adjusted_position = (int(text_position[0] * ratio), int(text_position[1] * ratio))
+        
         # Prepare drawing object
         draw = ImageDraw.Draw(template)
         
-        # Define font
-        font = ImageFont.truetype(font_path, font_size)
+        # Define font with adjusted size
+        adjusted_font_size = int(font_size * ratio)
+        font = ImageFont.truetype(font_path, adjusted_font_size)
         
         # Add the name to the certificate template
-        draw.text(text_position, name, font=font, fill=text_color)
+        draw.text(adjusted_position, name, font=font, fill=text_color)
         
-        # Save to BytesIO object instead of file
+        # Save to BytesIO object with compression
         img_io = io.BytesIO()
-        template.save(img_io, 'PNG')
+        template.save(img_io, 'PNG', optimize=True, quality=85)
         img_io.seek(0)
         return img_io
     except Exception as e:
@@ -165,8 +185,13 @@ def send_certificate_email(recipient_data, event_name="Fundamental of Web Develo
         email = recipient_data['email']
         certificate_id = recipient_data['certificate_id']
         
-        # Create verification link
-        verification_link = url_for('view_certificate', certificate_id=certificate_id, _external=True)
+        # Create verification link with absolute URL
+        if os.getenv('RENDER_EXTERNAL_URL'):
+            # When on Render
+            verification_link = f"{os.getenv('RENDER_EXTERNAL_URL')}/view_certificate/{certificate_id}"
+        else:
+            # Local development
+            verification_link = url_for('view_certificate', certificate_id=certificate_id, _external=True)
         
         # Create email
         msg = Message(
@@ -292,6 +317,18 @@ def adjust():
         text_color=session.get('text_color', "#444444")
     )
 
+@lru_cache(maxsize=32)
+def cached_preview(template_path, name, x, y, font_size, font_path, text_color):
+    text_position = (x, y)
+    return generate_preview(
+        template_path,
+        name,
+        font_path,
+        text_position,
+        font_size,
+        text_color
+    )
+
 @app.route('/get_preview')
 def get_preview():
     # Get parameters from request
@@ -307,14 +344,14 @@ def get_preview():
     session['font_size'] = font_size
     session['text_color'] = text_color
     
-    # Generate preview
-    text_position = (text_position_x, text_position_y)
-    preview_io = generate_preview(
+    # Use cached preview
+    preview_io = cached_preview(
         session['template_path'],
         preview_name,
-        session['font_path'],
-        text_position,
+        text_position_x,
+        text_position_y,
         font_size,
+        session['font_path'],
         text_color
     )
     
