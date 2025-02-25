@@ -115,6 +115,11 @@
                     </div>
                     
                     <form action="{{ url_for('generate') }}" method="post">
+                        <input type="hidden" name="text_position_x" id="hidden-x-pos" value="{{ text_position_x }}">
+                        <input type="hidden" name="text_position_y" id="hidden-y-pos" value="{{ text_position_y }}">
+                        <input type="hidden" name="font_size" id="hidden-font-size" value="{{ font_size }}">
+                        <input type="hidden" name="text_color" id="hidden-text-color" value="{{ text_color }}">
+                        
                         <div class="mb-4">
                             <label for="event-name" class="form-label">Event Name</label>
                             <input type="text" class="form-control" id="event-name" name="event_name" value="Fundamental of Web Development held in GDG On Campus AIT">
@@ -132,6 +137,12 @@
                 <div class="preview-container">
                     <h4>Certificate Preview</h4>
                     <img id="preview-img" src="{{ url_for('get_preview') }}" alt="Certificate Preview" class="preview-img">
+                    <div id="loading-indicator" style="display: none; margin-top: 10px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Updating preview...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -150,6 +161,21 @@
             const textColor = document.getElementById('text-color');
             const nameInput = document.getElementById('name');
             const previewImg = document.getElementById('preview-img');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            // Hidden form fields
+            const hiddenXPos = document.getElementById('hidden-x-pos');
+            const hiddenYPos = document.getElementById('hidden-y-pos');
+            const hiddenFontSize = document.getElementById('hidden-font-size');
+            const hiddenTextColor = document.getElementById('hidden-text-color');
+            
+            // Debounce function to limit preview updates
+            function debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
             
             // Function to update preview
             function updatePreview() {
@@ -159,42 +185,67 @@
                 const color = textColor.value;
                 const name = encodeURIComponent(nameInput.value);
                 
-                previewImg.src = `{{ url_for('get_preview') }}?x=${x}&y=${y}&font_size=${size}&name=${name}&text_color=${encodeURIComponent(color)}`;
+                // Update hidden form fields
+                hiddenXPos.value = x;
+                hiddenYPos.value = y;
+                hiddenFontSize.value = size;
+                hiddenTextColor.value = color;
+                
+                // Show loading indicator
+                loadingIndicator.style.display = 'block';
+                
+                // Create a new image object to handle the loading
+                const newImg = new Image();
+                newImg.onload = function() {
+                    previewImg.src = this.src;
+                    loadingIndicator.style.display = 'none';
+                };
+                
+                newImg.onerror = function() {
+                    loadingIndicator.style.display = 'none';
+                    alert('Error loading preview. Please try again.');
+                };
+                
+                // Set the source to load the new image
+                newImg.src = `{{ url_for('get_preview') }}?x=${x}&y=${y}&font_size=${size}&name=${name}&text_color=${encodeURIComponent(color)}&t=${new Date().getTime()}`;
             }
+            
+            // Create debounced version of updatePreview
+            const updatePreviewDebounced = debounce(updatePreview, 300);
             
             // Sync range and number input
             xRange.addEventListener('input', function() {
                 xPos.value = xRange.value;
-                updatePreview();
+                updatePreviewDebounced();
             });
             
             xPos.addEventListener('input', function() {
                 xRange.value = xPos.value;
-                updatePreview();
+                updatePreviewDebounced();
             });
             
             yRange.addEventListener('input', function() {
                 yPos.value = yRange.value;
-                updatePreview();
+                updatePreviewDebounced();
             });
             
             yPos.addEventListener('input', function() {
                 yRange.value = yPos.value;
-                updatePreview();
+                updatePreviewDebounced();
             });
             
             fontSizeRange.addEventListener('input', function() {
                 fontSize.value = fontSizeRange.value;
-                updatePreview();
+                updatePreviewDebounced();
             });
             
             fontSize.addEventListener('input', function() {
                 fontSizeRange.value = fontSize.value;
-                updatePreview();
+                updatePreviewDebounced();
             });
             
-            textColor.addEventListener('input', updatePreview);
-            nameInput.addEventListener('input', updatePreview);
+            textColor.addEventListener('input', updatePreviewDebounced);
+            nameInput.addEventListener('input', updatePreviewDebounced);
             
             // Initial update
             updatePreview();
