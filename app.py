@@ -230,7 +230,35 @@ def get_system_font_path(font_name):
 def index():
     return render_template('index.html')
 
+# Add these routes to your app.py file
+
+@app.route('/robots.txt')
+def robots():
+    return """User-agent: *
+Allow: /
+Sitemap:https://certificate-generator-o2x7.onrender.com/sitemap.xml
+""", 200, {'Content-Type': 'text/plain'}
+
+
+@app.route('/sitemap.xml')
+def sitemap():
+    sitemap_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://certificate-generator-o2x7.onrender.com</loc>
+    <lastmod>2025-02-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+"""
+    return sitemap_xml, 200, {'Content-Type': 'application/xml'}
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
 # Simple test route to verify app is running
+
 @app.route('/test')
 def test():
     return "Certificate app is running!"
