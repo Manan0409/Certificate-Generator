@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://certificate-generator-o2x7.onrender.com
