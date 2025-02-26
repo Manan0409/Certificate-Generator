@@ -1,13 +1,278 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Generate professional certificates easily using our automated tool. Upload your template and data to create custom certificates.">
+        <link rel="canonical" href="https://certificate-generator-o2x7.onrender.com">
+        <title>Certificate Generator</title>
+        
+        <!-- Google Consent Mode initialization -->
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            
+            gtag('consent', 'default', {
+                'ad_storage': 'denied',
+                'analytics_storage': 'denied',
+                'functionality_storage': 'denied',
+                'personalization_storage': 'denied',
+                'security_storage': 'granted'
+            });
+        </script>
+        
+        <!-- Only load Google Analytics after consent -->
+        <script>
+            function loadAnalytics() {
+                const script = document.createElement('script');
+                script.src = 'https://www.googletagmanager.com/gtag/js?id=G-XTJV6M0BX1'; // Replace with your GA ID
+                script.async = true;
+                document.head.appendChild(script);
+                
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'G-XTJV6M0BX1'); // Replace with your GA ID
+            }
+        </script>
+        
+        <!-- CMP Implementation -->
+        <script>
+            window.addEventListener('DOMContentLoaded', function() {
+                // Create banner elements
+                const banner = document.createElement('div');
+                banner.id = 'cookie-banner';
+                banner.style.cssText = 'position:fixed;bottom:20px;right:20px;width:350px;background:#fff;box-shadow:0 0 15px rgba(0,0,0,0.2);border-radius:8px;padding:20px;z-index:9999;font-family:sans-serif;';
+                
+                banner.innerHTML = `
+                    <h3 style="margin-top:0;margin-bottom:10px;font-size:16px;">Cookie Settings</h3>
+                    <p style="margin-bottom:15px;font-size:14px;line-height:1.4;">We use cookies to improve your experience. Choose your preferences below.</p>
+                    <div>
+                        <button id="accept-cookies" style="background:#0d6efd;color:white;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;margin-right:10px;font-size:14px;">Accept All</button>
+                        <button id="reject-cookies" style="background:#6c757d;color:white;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;margin-right:10px;font-size:14px;">Reject All</button>
+                        <button id="manage-cookies" style="background:transparent;border:1px solid #6c757d;padding:8px 15px;border-radius:4px;cursor:pointer;font-size:14px;">Manage</button>
+                    </div>
+                    <div style="margin-top:10px;font-size:12px;">
+                        <a href="/privacy" style="color:#0d6efd;text-decoration:none;">Privacy Policy</a>
+                    </div>
+                `;
+                
+                // Cookie preferences modal
+                const modal = document.createElement('div');
+                modal.id = 'preferences-modal';
+                modal.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;';
+                
+                modal.innerHTML = `
+                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:25px;border-radius:8px;width:90%;max-width:500px;">
+                        <h3 style="margin-top:0;">Cookie Preferences</h3>
+                        <div style="margin:15px 0;">
+                            <div style="display:flex;align-items:center;margin-bottom:10px;">
+                                <input type="checkbox" id="necessary-cookies" checked disabled style="margin-right:10px;">
+                                <div>
+                                    <label for="necessary-cookies" style="font-weight:bold;display:block;">Necessary Cookies</label>
+                                    <p style="margin:5px 0;font-size:14px;">Required for the website to function</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;margin-bottom:10px;">
+                                <input type="checkbox" id="analytics-cookies" style="margin-right:10px;">
+                                <div>
+                                    <label for="analytics-cookies" style="font-weight:bold;display:block;">Analytics Cookies</label>
+                                    <p style="margin:5px 0;font-size:14px;">Help us improve our website</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;">
+                                <input type="checkbox" id="functional-cookies" style="margin-right:10px;">
+                                <div>
+                                    <label for="functional-cookies" style="font-weight:bold;display:block;">Functional Cookies</label>
+                                    <p style="margin:5px 0;font-size:14px;">For enhanced website functionality</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <button id="save-preferences" style="background:#0d6efd;color:white;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;">Save Preferences</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(banner);
+                document.body.appendChild(modal);
+                
+                // Cookie functions
+                function setCookie(name, value, days) {
+                    const date = new Date();
+                    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                    document.cookie = name + "=" + value + ";expires=" + date.toUTCString() + ";path=/";
+                }
+                
+                function getCookie(name) {
+                    const value = "; " + document.cookie;
+                    const parts = value.split("; " + name + "=");
+                    if (parts.length === 2) return parts.pop().split(";").shift();
+                    return null;
+                }
+                
+                // Check if consent was already given
+                if (getCookie('cookie_consent')) {
+                    banner.style.display = 'none';
+                    const preferences = JSON.parse(getCookie('cookie_consent'));
+                    
+                    if (preferences.analytics) {
+                        gtag('consent', 'update', {'analytics_storage': 'granted'});
+                        loadAnalytics();
+                    }
+                    
+                    if (preferences.functional) {
+                        gtag('consent', 'update', {'functionality_storage': 'granted'});
+                    }
+                }
+                
+                // Event listeners
+                document.getElementById('accept-cookies').addEventListener('click', function() {
+                    const preferences = {
+                        necessary: true,
+                        analytics: true,
+                        functional: true
+                    };
+                    
+                    setCookie('cookie_consent', JSON.stringify(preferences), 365);
+                    banner.style.display = 'none';
+                    
+                    gtag('consent', 'update', {
+                        'analytics_storage': 'granted',
+                        'functionality_storage': 'granted'
+                    });
+                    
+                    loadAnalytics();
+                });
+                
+                document.getElementById('reject-cookies').addEventListener('click', function() {
+                    const preferences = {
+                        necessary: true,
+                        analytics: false,
+                        functional: false
+                    };
+                    
+                    setCookie('cookie_consent', JSON.stringify(preferences), 365);
+                    banner.style.display = 'none';
+                });
+                
+                document.getElementById('manage-cookies').addEventListener('click', function() {
+                    modal.style.display = 'block';
+                    
+                    // Set checkboxes to current preferences if available
+                    if (getCookie('cookie_consent')) {
+                        const preferences = JSON.parse(getCookie('cookie_consent'));
+                        document.getElementById('analytics-cookies').checked = preferences.analytics;
+                        document.getElementById('functional-cookies').checked = preferences.functional;
+                    }
+                });
+                
+                document.getElementById('save-preferences').addEventListener('click', function() {
+                    const analyticsConsent = document.getElementById('analytics-cookies').checked;
+                    const functionalConsent = document.getElementById('functional-cookies').checked;
+                    
+                    const preferences = {
+                        necessary: true,
+                        analytics: analyticsConsent,
+                        functional: functionalConsent
+                    };
+                    
+                    setCookie('cookie_consent', JSON.stringify(preferences), 365);
+                    modal.style.display = 'none';
+                    banner.style.display = 'none';
+                    
+                    gtag('consent', 'update', {
+                        'analytics_storage': analyticsConsent ? 'granted' : 'denied',
+                        'functionality_storage': functionalConsent ? 'granted' : 'denied'
+                    });
+                    
+                    if (analyticsConsent) {
+                        loadAnalytics();
+                    }
+                });
+                
+                // Close modal when clicking outside
+                window.addEventListener('click', function(event) {
+                    if (event.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+        </script>
+        
+        <!-- Regular stylesheets after consent initialization -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <script src="/static/script.js"></script>
+        <!-- Rest of your head content... -->
+    </head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificate Generator</title>
+    <meta name="description" content="Generate professional certificates easily using our automated tool. Upload your template and data to create custom certificates.">
+    <link rel="canonical" href="https://certificate-generator-o2x7.onrender.com">
+    <meta name="robots" content="index, follow">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="/static/script.js"></script>
     <meta name="google-adsense-account" content="ca-pub-3662739570993888">
+    <script src="/static/script.js"></script>
+    <!-- Google Consent Mode initialization -->
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    
+    gtag('consent', 'default', {
+      'ad_storage': 'denied',
+      'analytics_storage': 'denied',
+      'functionality_storage': 'denied',
+      'personalization_storage': 'denied',
+      'security_storage': 'granted'
+    });
+  </script>
+  
+  <!-- Google CMP implementation -->
+  <script src="https://cdn.jsdelivr.net/npm/@cookieyes/cookieyes-banner@latest/dist/cookieyes.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      cookieyes.initialize({
+        companyLogo: "/static/logo.png", // Add your logo
+        bannerConfig: {
+          layout: "box",
+          position: "bottom-right",
+          buttons: {
+            accept: true,
+            reject: true,
+            settings: true
+          }
+        },
+        consentPreferences: {
+          necessary: {
+            title: "Necessary cookies",
+            description: "Required for basic site functionality",
+            required: true
+          },
+          analytics: {
+            title: "Analytics cookies",
+            description: "Help us improve our website",
+            required: false
+          },
+          functional: {
+            title: "Functional cookies",
+            description: "For enhanced functionality",
+            required: false
+          }
+        },
+        onConsent: function(consent) {
+          if(consent.analytics) {
+            gtag('consent', 'update', {'analytics_storage': 'granted'});
+          }
+          if(consent.functional) {
+            gtag('consent', 'update', {'functionality_storage': 'granted'});
+          }
+        }
+      });
+    });
+  </script>
     <style>
         body {
             padding-top: 2rem;
@@ -208,7 +473,11 @@
             </form>
         </div>
     </div>
-
+    <footer class="mt-5 py-3 text-center">
+        <div class="container">
+          <p class="text-muted">© 2025 Certificate Generator | <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms of Use</a></p>
+        </div>
+      </footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
