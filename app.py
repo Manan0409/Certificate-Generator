@@ -450,8 +450,8 @@ def view_certificate(certificate_id):
                           certificate_found=True,
                           certificate_id=certificate_id,
                           certificate_name=certificate_name,
-                          certificate_title="Certificate of Completion",  # Add this
-                          certificate_issuer="GDG On Campus Ahmedabad Institute of Technology",    # Add this
+                          certificate_title="Certificate of Completion",
+                          certificate_issuer="GDG On Campus Ahmedabad Institute of Technology",  # Explicitly set here
                           certificate_image_url=certificate_image_url,
                           download_url=download_url)
 
