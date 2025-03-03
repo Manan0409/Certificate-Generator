@@ -374,6 +374,7 @@ def generate():
         text_color = request.form.get('text_color', session.get('text_color', "#444444"))
         event_name = request.form.get('event_name', "Certificate of Completion")
         
+        
         # Get paths from session
         template_path = session.get('template_path')
         excel_path = session.get('excel_path')
@@ -450,7 +451,7 @@ def view_certificate(certificate_id):
                           certificate_id=certificate_id,
                           certificate_name=certificate_name,
                           certificate_title="Certificate of Completion",  # Add this
-                          certificate_issuer="Your Organization Name",    # Add this
+                          certificate_issuer="GDG On Campus Ahmedabad Institute of Technology",    # Add this
                           certificate_image_url=certificate_image_url,
                           download_url=download_url)
 
