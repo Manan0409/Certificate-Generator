@@ -153,34 +153,28 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // LinkedIn Add Certificate
-            document.getElementById('add-to-linkedin').addEventListener('click', function() {
-                // Format the current date as MM/YYYY for LinkedIn
-                const today = new Date();
-                const month = today.getMonth() + 1; // JavaScript months are 0-based
-                const year = today.getFullYear();
-                const issueDate = `${month}/${year}`;
-                
-                // Set up parameters for LinkedIn's Add to Profile feature
-                const params = new URLSearchParams({
-                    startTask: 'CERTIFICATION_NAME',
-                    name: 'Certificate of Completion', // Certificate name - modify as needed
-                    organizationId: '88935188', // LinkedIn ID for GDG (you may need to find the correct ID)
-                    organizationName: 'GDG on Campus Ahmedabad institute of Technology',
-                    issueYear: year,
-                    issueMonth: month,
-                    certId: '{{ certificate_id }}',
-                    certUrl: window.location.href
-                });
-                
-                // Open LinkedIn add profile URL with parameters
-                window.open(`https://www.linkedin.com/profile/add?${params.toString()}`, '_blank');
-            });
+           // LinkedIn Add Certificate
+document.getElementById('add-to-linkedin').addEventListener('click', function() {
+    // LinkedIn proper format for adding certificates
+    const linkedInUrl = 'https://www.linkedin.com/profile/add';
+    const params = new URLSearchParams({
+    startTask: 'CERTIFICATION_NAME',
+    name: '{{ certificate_title }}',
+    organizationName: '{{ certificate_issuer }}',
+        issueYear: new Date().getFullYear(),
+        issueMonth: new Date().getMonth() + 1,
+        certUrl: window.location.href,
+        certId: '{{ certificate_id }}'
+    });
+    
+    window.open(`${linkedInUrl}?${params.toString()}`, '_blank');
+});
+    window.open(`${linkedInUrl}?${params.toString()}`, '_blank');
 
             // Email Share
             document.getElementById('share-email').addEventListener('click', function() {
                 const subject = encodeURIComponent('Check out my new certificate!');
-                const body = encodeURIComponent('I just earned a certificate from GDG on Campus Ahmedabad institute of Technology! Check it out here: ' + window.location.href);
+                const body = encodeURIComponent('I just earned a certificate! Check it out here: ' + window.location.href);
                 window.location.href = `mailto:?subject=${subject}&body=${body}`;
             });
 
@@ -192,16 +186,11 @@
 
             // Twitter Share
             document.getElementById('share-twitter').addEventListener('click', function() {
-                const text = encodeURIComponent('I just earned a certificate from GDG on Campus Ahmedabad institute of Technology! Check it out here:');
+                const text = encodeURIComponent('I just earned a certificate! Check it out here:');
                 const shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.href)}`;
                 window.open(shareUrl, '_blank', 'width=600,height=400');
             });
         });
     </script>
-    <footer class="mt-5 py-3 text-center">
-        <div class="container">
-          <p class="text-muted">© 2025 Certificate Generator | <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms of Use</a></p>
-        </div>
-      </footer>
 </body>
 </html>
