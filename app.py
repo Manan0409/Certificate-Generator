@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from matplotlib import font_manager
 from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor  # For parallel processing
 
 # Load environment variables from .env file
 load_dotenv()
@@ -38,7 +39,7 @@ UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
 CERTIFICATE_FOLDER = os.getenv('CERTIFICATE_FOLDER', 'certificates')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'xlsx', 'xls', 'ttf', 'otf'}
 
-# Add this after ALLOWED_EXTENSIONS definition
+# Predefined fonts
 PREDEFINED_FONTS = [
     ('arial', 'Arial'),
     ('arialbd', 'Arial Bold'),
@@ -50,7 +51,7 @@ PREDEFINED_FONTS = [
     ('comicbd', 'Comic Sans MS Bold'),
 ]
 
-# Create necessary directories - ensure they exist on Render
+# Create necessary directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CERTIFICATE_FOLDER, exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_FOLDER, 'fonts'), exist_ok=True)
@@ -194,7 +195,7 @@ def send_certificate_email(recipient_data, event_name="Fundamental of Web Develo
         # Create verification link with absolute URL
         verification_link = f"{BASE_URL}/view_certificate/{certificate_id}"
         
-       # Create email
+        # Create email
         msg = Message(
             subject=f"Your Certificate for {event_name}",
             recipients=[email]
@@ -217,7 +218,7 @@ def send_certificate_email(recipient_data, event_name="Fundamental of Web Develo
         print(f"Error sending email to {email}: {e}")
         return False
 
-# Add this new function
+# Get system font path
 def get_system_font_path(font_name):
     try:
         font_path = font_manager.findfont(font_name)
@@ -374,7 +375,6 @@ def generate():
         text_color = request.form.get('text_color', session.get('text_color', "#444444"))
         event_name = request.form.get('event_name', "Certificate of Completion")
         
-        
         # Get paths from session
         template_path = session.get('template_path')
         excel_path = session.get('excel_path')
@@ -409,7 +409,7 @@ def generate():
             if send_certificate_email(recipient, event_name):
                 success_count += 1
         
-      # Flash result message
+        # Flash result message
         if success_count == len(email_data):
             flash(f'Successfully generated {len(certificate_paths)} certificates and sent all {success_count} emails!')
         else:
