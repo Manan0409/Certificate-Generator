@@ -7,3 +7,5 @@ matplotlib
 flask_mail
 gunicorn
 werkzeug
+psycopg2-binary
+flask-sqlalchemy
