@@ -49,6 +49,31 @@ class Certificate(db.Model):
     def __repr__(self):
         return f'<Certificate {self.name} - {self.id}>'
 
+@app.route('/db-tables')
+def show_tables():
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        result = "<h1>Database Tables</h1>"
+        result += "<ul>"
+        
+        for table in tables:
+            result += f"<li>{table}</li>"
+            # Get column information
+            columns = inspector.get_columns(table)
+            result += "<ul>"
+            for column in columns:
+                result += f"<li>{column['name']} ({column['type']})</li>"
+            result += "</ul>"
+        
+        result += "</ul>"
+        return result
+    except Exception as e:
+        return f"Error inspecting database: {str(e)}"
+
+
 # Configure Flask-Mail
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
