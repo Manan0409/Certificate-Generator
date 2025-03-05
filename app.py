@@ -14,15 +14,40 @@ from dotenv import load_dotenv
 from matplotlib import font_manager
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor  # For parallel processing
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, timedelta
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Get base URL for deployed environment
+# Base URL for deployed environment
 BASE_URL = os.getenv('BASE_URL', 'http://localhost:5000')
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'development-secret-key')
+
+# PostgreSQL Configuration (with fallback to SQLite)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL', 
+    'sqlite:///certificates.db'  # Fallback to SQLite if no PostgreSQL
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Certificate Database Model
+class Certificate(db.Model):
+    __tablename__ = 'certificates'
+    
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    file_path = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    event_name = db.Column(db.String(200), nullable=True)
+
+    def __repr__(self):
+        return f'<Certificate {self.name} - {self.id}>'
 
 # Configure Flask-Mail
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -84,7 +109,7 @@ def generate_certificate(template_path, output_path, name, font_path, text_posit
         return True
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Certificate generation error: {e}")
         return False
 
 # Generate preview image with optimization for faster rendering
@@ -135,11 +160,10 @@ def cached_preview(template_path, name, x, y, font_size, font_path, text_color):
     )
 
 # Batch generate certificates and return list of generated certificate paths
-def batch_generate_certificates(template_path, excel_file, output_dir, font_path, text_position, font_size, text_color="#444444"):
+def batch_generate_certificates(template_path, excel_file, output_dir, font_path, text_position, font_size, text_color="#444444", event_name="Certificate of Completion"):
     certificate_paths = []
     email_data = []
     
-    # Load names from the Excel file
     try:
         data = pd.read_excel(excel_file)
         
@@ -147,19 +171,17 @@ def batch_generate_certificates(template_path, excel_file, output_dir, font_path
         if 'Name' not in data.columns or 'Email' not in data.columns:
             raise ValueError("Excel file must contain 'Name' and 'Email' columns")
         
+        expiration_date = datetime.now() + timedelta(days=365)
+        
         # Generate certificates for each name
         for index, row in data.iterrows():
             name = row['Name']
             email = row['Email']
-            
-            # Generate a unique ID for this certificate
             certificate_id = str(uuid.uuid4())
             
-            # Create filename with the unique ID
             filename = f"{secure_filename(name)}_{certificate_id}.png"
             output_path = os.path.join(output_dir, filename)
             
-            # Generate the certificate
             success = generate_certificate(
                 template_path, 
                 output_path, 
@@ -171,22 +193,38 @@ def batch_generate_certificates(template_path, excel_file, output_dir, font_path
             )
             
             if success:
+                # Create database entry
+                certificate = Certificate(
+                    id=certificate_id,
+                    name=name,
+                    email=email,
+                    file_path=output_path,
+                    expires_at=expiration_date,
+                    event_name=event_name
+                )
+                
+                # Add to database
+                db.session.add(certificate)
+                
                 certificate_paths.append(output_path)
                 email_data.append({
                     'name': name,
                     'email': email,
-                    'certificate_path': output_path,
-                    'certificate_id': certificate_id
+                    'certificate_id': certificate_id,
                 })
+        
+        # Commit all database entries
+        db.session.commit()
     
     except Exception as e:
+        db.session.rollback()
         print(f"Error in batch generation: {e}")
         return [], []
 
     return certificate_paths, email_data
 
-# Send email with certificate link using absolute URL for Render.com
-def send_certificate_email(recipient_data, event_name="Fundamental of Web Development"):
+# Send email with certificate link
+def send_certificate_email(recipient_data, event_name="Certificate of Completion"):
     try:
         name = recipient_data['name']
         email = recipient_data['email']
@@ -365,6 +403,7 @@ def get_preview():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/generate', methods=['POST'])
+@app.route('/generate', methods=['POST'])
 def generate():
     """Generate certificates based on adjusted settings"""
     try:
@@ -396,7 +435,8 @@ def generate():
             font_path,
             text_position,
             font_size,
-            text_color
+            text_color,
+            event_name
         )
         
         if not certificate_paths:
@@ -424,22 +464,17 @@ def generate():
 @app.route('/view_certificate/<certificate_id>')
 def view_certificate(certificate_id):
     """Display a certificate for verification"""
-    # Find the certificate with the given ID
-    certificate_path = None
-    certificate_name = None
+    certificate = Certificate.query.filter_by(id=certificate_id).first()
     
-    # Check all files in the certificate folder
-    for filename in os.listdir(app.config['CERTIFICATE_FOLDER']):
-        if certificate_id in filename:
-            certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], filename)
-            # Extract name from filename (remove the UUID part)
-            certificate_name = filename.split('_')[0].replace('-', ' ').title()
-            break
-    
-    if not certificate_path:
+    if not certificate:
         return render_template('view_certificate.html', 
                               certificate_found=False, 
                               message="Certificate not found.")
+    
+    if certificate.expires_at and certificate.expires_at < datetime.now():
+        return render_template('view_certificate.html', 
+                              certificate_found=False, 
+                              message="Certificate has expired.")
     
     # Create image URL for the template
     certificate_image_url = url_for('get_certificate_image', certificate_id=certificate_id)
@@ -448,47 +483,38 @@ def view_certificate(certificate_id):
     
     return render_template('view_certificate.html',
                           certificate_found=True,
-                          certificate_id=certificate_id,
-                          certificate_name=certificate_name,
-                          certificate_title="Certificate of Completion",
-                          certificate_issuer="GDG on Campus Ahmedabad Institute of Technology",  # Explicitly set here
+                          certificate_id=certificate.id,
+                          certificate_name=certificate.name,
+                          certificate_title=certificate.event_name or "Certificate of Completion",
+                          certificate_issuer="Your Organization",
                           certificate_image_url=certificate_image_url,
                           download_url=download_url)
 
 @app.route('/download_certificate/<certificate_id>')
 def download_certificate(certificate_id):
     """Allow downloading a certificate"""
-    # Find the certificate with the given ID
-    certificate_path = None
+    certificate = Certificate.query.filter_by(id=certificate_id).first()
     
-    # Check all files in the certificate folder
-    for filename in os.listdir(app.config['CERTIFICATE_FOLDER']):
-        if certificate_id in filename:
-            certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], filename)
-            break
-    
-    if not certificate_path:
+    if not certificate or not os.path.exists(certificate.file_path):
         flash('Certificate not found.')
         return redirect(url_for('index'))
     
-    return send_file(certificate_path, as_attachment=True)
+    return send_file(certificate.file_path, as_attachment=True)
 
 @app.route('/get_certificate_image/<certificate_id>')
 def get_certificate_image(certificate_id):
     """Serve the certificate image for the view page"""
-    # Find the certificate with the given ID
-    certificate_path = None
+    certificate = Certificate.query.filter_by(id=certificate_id).first()
     
-    # Check all files in the certificate folder
-    for filename in os.listdir(app.config['CERTIFICATE_FOLDER']):
-        if certificate_id in filename:
-            certificate_path = os.path.join(app.config['CERTIFICATE_FOLDER'], filename)
-            break
-    
-    if not certificate_path:
+    if not certificate or not os.path.exists(certificate.file_path):
         return jsonify({'error': 'Certificate not found'}), 404
     
-    return send_file(certificate_path)
+    return send_file(certificate.file_path)
+
+# Initialize database before running the app
+@app.before_first_request
+def create_tables():
+    db.create_all()
 
 # Error handlers
 @app.errorhandler(404)
